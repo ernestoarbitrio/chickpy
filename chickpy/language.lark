@@ -1,0 +1,111 @@
+noop: "NOOP"i  // No op command, for testing purposes
+
+// Use `alias_list` only as INPUT alias
+alias_list: alias (_COMMA alias)*
+alias: single_alias|alias_expand|alias_func
+alias_expand: raw_alias "..." raw_alias
+single_alias: raw_alias
+alias_func: IDENTIFIER "(" label_list? _RPAR
+
+// Use `output_alias_list` as OUTPUT aliases
+output_alias_list: single_alias (_COMMA single_alias)*  // No functions
+
+// Use this `raw_alias` if you want to receive the Token() instance in
+// your argument in the Transformer. You will want this if you want to access
+// the Token.line and Token.column
+raw_alias: IDENTIFIER|BACKTICK_QUOTED
+IDENTIFIER: ("A".."Z"|"a".."z")("A".."Z"|"a".."z"|"0".."9"|/_/)*
+
+
+MIN_MAX: "MIN"i|"MAX"i
+FIRST_LAST: "FIRST"i|"LAST"i
+BEFORE_AFTER: "BEFORE"i|"AFTER"i
+VALID_MISSING: "VALID"i|"MISSING"i
+NOT: "NOT"i
+NULL: "NULL"i
+MISSING: "MISSING"i
+TOP_BOTTOM: "BOTTOM"i|"TOP"i
+FIELD_NAME: "DESCRIPTION"i|"NOTES"i|"TITLE"i
+ALIAS_FIELD_NAME: "DESCRIPTION"i|"NOTES"i|"TITLE"i|"ALIAS"i
+ROOTS: "HIDDEN"i|"SECURE"i|"ROOT"i
+
+markdown: MULTILINE_QUOTED
+quoted_string: ESCAPED_STRING
+label: ESCAPED_STRING|BACKTICK_QUOTED
+RAW_LABEL: ESCAPED_STRING|BACKTICK_QUOTED
+label_list: (RAW_LABEL (_COMMA label)*|label_expand)
+label_expand: RAW_LABEL "..." label
+
+//
+// Expressions Arithmethic/Logic
+//
+
+//
+// NOTE ABOUT EXPRESSIONS
+//  If your rule needs to use `expression` you must use its expansion:
+//      e_term (a_op e_term)*
+//  inside your command definition and add an entry for your rule under
+//  the `CommandsWExpressionTransformers` that grabs all the nodes of the
+//  expression and returns a single node, so your processor receives a single
+//  node inside instead of an indeterminate list of expression chunks.
+//
+expression: e_term (a_op e_term)*
+a_op: (a_op_word|a_op_symbol)
+!a_op_symbol: _WS? ("+"|/-/|"*"|"/"|"<"|">"|"<="|">="|"=="|"="|"!=") _WS?
+!a_op_word: _WS ("AND"i|"OR"i|"IN"i|"ORNM"i) _WS
+e_term: e_value|e_parens
+!term_negation: "NOT"i _WS
+e_parens: term_negation? _LPAR expression _RPAR
+
+func_call: term_negation? single_alias "(" _WS? expression (_COMMA expression)* _RPAR
+
+e_value: e_alias|e_constant|func_call
+e_alias: single_alias
+e_constant: SIGNED_NUMBER|ESCAPED_STRING|e_list|NULL
+e_list: "[" _WS? e_list_value (_COMMA e_list_value)* _WS? "]"
+e_list_value: SIGNED_NUMBER|ESCAPED_STRING|e_alias
+
+x_values: "[" _WS? e_list_numbers_value (_COMMA e_list_numbers_value)* _WS? "]"
+y_values: "[" _WS? e_list_numbers_value (_COMMA e_list_numbers_value)* _WS? "]"
+e_list_numbers_value: SIGNED_NUMBER
+
+
+//
+//  Whitespace and helpers
+//
+
+_COMMENT: WS_INLINE? "#" WS_INLINE? /[ \w\d\S\t]/* WS
+_SEMICOLON: WS? ";" WS? _COMMENT*
+_WS: (/[ \t\f\r\n]/|_COMMENT)+
+
+BACKTICK_QUOTED: "`" _STRING_ESC_INNER "`"
+MULTILINE_QUOTED: "```" (_STRING_ESC_INNER|_WS)+ "```"
+_COMMA: _WS? "," _WS?
+_LPAR:  _WS? "(" _WS?
+_RPAR:  _WS? ")"
+_EQ: _WS? "=" _WS?
+
+%import common._STRING_ESC_INNER
+%import common.ESCAPED_STRING
+%import common.WS
+%import common.WS_INLINE
+%import common.SIGNED_NUMBER
+
+LEADING_WS: /^[ \t\f\r\n]+/
+%ignore LEADING_WS
+
+
+// Instantiate a parser with this start to allow schema block
+start: _WS? command*
+
+command: (create_chart) _SEMICOLON
+
+code_list: (code|code_expand) (_COMMA (code|code_expand))*
+code_expand: code "..." code
+!code: "-"? "0".."9"+
+
+create_chart: "CREATE"i _WS "CHART"i _WS label (_WS data_source)?
+
+data_source: data_source1 | data_source2
+data_source1: "XVALUES"i _WS x_values _WS "YVALUES"i _WS y_values
+data_source2: "YVALUES"i _WS y_values _WS "XVALUES"i _WS x_values
