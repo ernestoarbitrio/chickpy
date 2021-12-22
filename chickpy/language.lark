@@ -104,8 +104,12 @@ code_list: (code|code_expand) (_COMMA (code|code_expand))*
 code_expand: code "..." code
 !code: "-"? "0".."9"+
 
-create_chart: "CREATE"i _WS "CHART"i _WS label (_WS data_source)?
+create_chart: "CREATE"i _WS "CHART"i _WS label _WS data_source? chart_options*
 
-data_source: data_source1 | data_source2
+data_source: data_source1 | data_source2 | data_source3
 data_source1: "XVALUES"i _WS x_values _WS "YVALUES"i _WS y_values
 data_source2: "YVALUES"i _WS y_values _WS "XVALUES"i _WS x_values
+data_source3: "VALUES"i _WS x_values _WS y_values
+
+chart_options: _WS "TYPE"i _WS CHART_TYPE?
+CHART_TYPE: "LINE"i|"SCATTER"i
