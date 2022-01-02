@@ -8,6 +8,8 @@ authors = ["Arbitrio <ernesto.arbitrio@gmail.com>"]
 python = "^3.8"
 lark = "^1.0.0"
 matplotlib = "^3.5.1"
+mypy = "^0.930"
+mock = "^4.0.3"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^4.0.1"

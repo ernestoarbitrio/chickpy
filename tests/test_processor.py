@@ -1,9 +1,12 @@
 import pytest
 from lark.exceptions import UnexpectedToken
+from mock import patch
 
 from chickpy.backend import MatplotlibBackend
 from chickpy.parser import parser
-from chickpy.processor import _CreateChartProcessor
+from chickpy.processor import _CommandProcessor, _CreateChartProcessor
+
+from .util import class_mock, instance_mock
 
 
 class Describe_CreateChartProcessor:
@@ -89,3 +92,22 @@ class Describe_CreateChartProcessor:
         diff = set(expected_error_message.splitlines()) ^ set(str(e.value).splitlines())
 
         assert not diff
+
+
+class Describe_CommandProcessor:
+    def it_provides_a_factory_for_constructing_processor_objects(self, request):
+        script = """CREATE CHART "foo" VALUES [-1,2,3,4] [4,5,6,7] TYPE LINE;"""
+        tree = parser.parse(script)
+        processor_ = instance_mock(request, _CreateChartProcessor)
+        _CreateChartProcessorCls = class_mock(
+            request,
+            "chickpy.processor._CreateChartProcessor",
+            return_value=processor_,
+        )
+        with patch(
+            "chickpy.processor.PROCESSORS", {"create_chart": _CreateChartProcessorCls}
+        ):
+            processor = _CommandProcessor.factory(tree)
+
+        assert processor is processor_
+        _CreateChartProcessorCls.assert_called_once_with(tree, MatplotlibBackend)
