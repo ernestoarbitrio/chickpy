@@ -2,6 +2,8 @@ from functools import cached_property as lazy_property
 
 import matplotlib.pyplot as plt  # type: ignore
 
+from chickpy.enums import CHART_TYPE
+
 
 class _BaseBackend:
     def __init__(self, chart: dict):
@@ -9,15 +11,17 @@ class _BaseBackend:
 
     @lazy_property
     def _chart_type(self) -> str:
-        return self._chart.get("options", {}).get("chart_type", "LINE")
+        return self._chart.get("options", {}).get("chart_type", CHART_TYPE.LINE)
 
     @lazy_property
     def _method_name(self) -> str:
-        return {"SCATTER": "scatter", "LINE": "plot"}.get(self._chart_type, "plot")
+        return self._chart_type.value
 
 
 class MatplotlibBackend(_BaseBackend):
-    def render(self) -> None:
-        plt.title(self._chart["label"].replace('"', ""))
+    def render(self, show: bool = True) -> None:
+        plt.figure()  # Create a figure containing a single axes.
+        plt.title(self._chart["label"][1:-1])
         getattr(plt, self._method_name)(self._chart["xvalues"], self._chart["yvalues"])
-        plt.show()
+        if show:
+            plt.show()

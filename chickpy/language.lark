@@ -65,7 +65,7 @@ e_constant: SIGNED_NUMBER|ESCAPED_STRING|e_list|NULL
 e_list: "[" _WS? e_list_value (_COMMA e_list_value)* _WS? "]"
 e_list_value: SIGNED_NUMBER|ESCAPED_STRING|e_alias
 
-x_values: "[" _WS? e_list_numbers_value (_COMMA e_list_numbers_value)* _WS? "]"
+x_values: "[" _WS? e_list_value (_COMMA e_list_value)* _WS? "]"
 y_values: "[" _WS? e_list_numbers_value (_COMMA e_list_numbers_value)* _WS? "]"
 e_list_numbers_value: SIGNED_NUMBER
 
@@ -112,4 +112,4 @@ data_source2: "YVALUES"i _WS y_values _WS "XVALUES"i _WS x_values
 data_source3: "VALUES"i _WS x_values _WS y_values
 
 chart_options: _WS "TYPE"i _WS CHART_TYPE?
-CHART_TYPE: "LINE"i|"SCATTER"i
+CHART_TYPE: "LINE"i|"SCATTER"i|"BAR"i|"HORIZONTAL"i _WS "BAR"i

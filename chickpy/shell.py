@@ -22,7 +22,7 @@ class ChickPrompt(Cmd):
         print("exit the application. Shorthand: x q Ctrl-D.")
 
     def default(self, inp):
-        if inp == "x" or inp == "q":
+        if inp == "q":
             return self.do_exit(inp)
 
         print("Default: {}".format(inp))

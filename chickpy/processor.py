@@ -4,6 +4,7 @@ from typing import Any, List, Tuple, Type, Union
 from lark import Token, Tree
 
 from chickpy.backend import MatplotlibBackend
+from chickpy.enums import CHART_TYPE
 from chickpy.parser import parser
 
 
@@ -12,11 +13,11 @@ class Command:
         self._script = script
 
     @classmethod
-    def run(cls, script: str) -> None:
+    def run(cls, script: str, show_output: bool = True) -> None:
         tree: Tree = parser.parse(script)
         processor: _CreateChartProcessor = _CommandProcessor.factory(tree)
         processor.validate()
-        processor.backend.render()
+        processor.backend.render(show_output)
 
 
 class _CreateChartProcessor:
@@ -32,15 +33,14 @@ class _CreateChartProcessor:
         return self._backend(self._chart)
 
     def validate(self) -> None:
-        label: Token = self.pick_node("label", self._tree.children)[0]
+        label: Token = self._pick_node("label", self._tree.children)[0]
         data_source_tree: Union[str, Tree] = self._tree.children[1]
-        chart_options_nodes: List = self.pick_nodes(
+        chart_options_nodes: List = self._pick_nodes(
             "chart_options", self._tree.children
         )
-        xvalues: List[int]
-        yvalues: List[int]
         xvalues, yvalues = _DataSource.values(data_source_tree)
         options: dict = _ChartOptions.values(chart_options_nodes)
+        self._validate(xvalues, options)
         self._chart = {
             "label": label.value,
             "xvalues": xvalues,
@@ -48,14 +48,14 @@ class _CreateChartProcessor:
             "options": options,
         }
 
-    def pick_nodes(self, node_type: str, nodes: list) -> List:
+    def _pick_nodes(self, node_type: str, nodes: list) -> List:
         """In a list of nodes, return all nodes matching the type."""
         matches: List = [
             n for n in nodes if isinstance(n, Tree) and n.data == node_type
         ]
         return [m.children for m in matches]
 
-    def pick_node(self, node_type: str, nodes: list) -> List:
+    def _pick_node(self, node_type: str, nodes: list) -> List:
         """In a list of nodes, return the first node matching the type.
 
         Use this when you have optional nodes in a Tree's children.
@@ -64,6 +64,15 @@ class _CreateChartProcessor:
             n for n in nodes if isinstance(n, Tree) and n.data == node_type
         ]
         return matches[0].children if matches else [Token("", "")]
+
+    def _validate(self, xvalues: List[Union[str, float]], options: dict) -> None:
+        chart_type: str = options.get("chart_type", CHART_TYPE.LINE)
+        if chart_type in CHART_TYPE.BARS() and all(
+            isinstance(x, float) for x in xvalues
+        ):
+            raise ValueError(
+                f"{chart_type.name.replace('_', ' ')} cannot have numeric x values."
+            )
 
 
 class _CommandProcessor:
@@ -81,7 +90,7 @@ class _CommandProcessor:
         ChartProcessorCls: Type[_CreateChartProcessor] = PROCESSORS.get(
             command_token.value, _CreateChartProcessor
         )
-        return ChartProcessorCls(self._tree, backend)
+        return ChartProcessorCls(command_node, backend)
 
     def _command_node(self, node) -> Tree:
         if isinstance(node, Tree):
@@ -102,7 +111,9 @@ class _ChartOptions:
         options: dict = dict()
         for node in options_nodes:
             for token in node:
-                options[token.type.lower()] = token.value
+                options[token.type.lower()] = getattr(
+                    CHART_TYPE, token.value.replace(" ", "_")
+                )
         return options
 
 
@@ -111,14 +122,20 @@ class _DataSource:
         self._data_source_tree = data_source_tree
 
     @classmethod
-    def values(cls, data_source_tree: Any) -> Tuple[list, list]:
+    def values(cls, data_src_tree: Any) -> Tuple[List[Union[str, float]], List[float]]:
+        def sanitize_value(value: str) -> Union[str, float]:
+            try:
+                return float(value)
+            except ValueError:
+                return value[1:-1]
+
         xvalues: map = map(
-            lambda x: float(x.children[0].value),
-            list(data_source_tree.find_data("x_values"))[0].children,
+            lambda x: sanitize_value(x.children[0].value),
+            list(data_src_tree.find_data("x_values"))[0].children,
         )
         yvalues: map = map(
             lambda x: float(x.children[0].value),
-            list(data_source_tree.find_data("y_values"))[0].children,
+            list(data_src_tree.find_data("y_values"))[0].children,
         )
         return list(xvalues), list(yvalues)
 
