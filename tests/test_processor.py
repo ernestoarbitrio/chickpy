@@ -250,3 +250,28 @@ class Describe_Command:
         assert mock_plt.barh.called
         mock_plt.title.assert_called_once_with("foo")
         mock_plt.barh.assert_called_once_with(["a"], [4.0])
+
+    @patch("%s.backend.plt" % __name__)
+    @pytest.mark.parametrize(
+        "script, plot_type",
+        (
+            ("""CREATE CHART "foo" FROM CSV csv_placeholder TYPE LINE;""", "plot"),
+            ("""CREATE CHART "foo" FROM CSV csv_placeholder;""", "plot"),
+            (
+                """CREATE CHART "foo" FROM CSV csv_placeholder TYPE SCATTER;""",
+                "scatter",
+            ),
+        ),
+    )
+    def it_parses_and_plot_chart_from_csv(self, mock_plt, script, plot_type):
+        script = script.replace(
+            "csv_placeholder", '"tests/fixtures/csv/base_csv_comma_separated.csv"'
+        )
+        Command.run(script, show_output=False)
+
+        assert mock_plt.figure.called
+        assert getattr(mock_plt, plot_type).called
+        mock_plt.title.assert_called_once_with("foo")
+        getattr(mock_plt, plot_type).assert_called_once_with(
+            [0.0, 1.0, 2.0, 4.0, 8.0], [1.0, 2.0, 3.0, 7.0, 9.0]
+        )
