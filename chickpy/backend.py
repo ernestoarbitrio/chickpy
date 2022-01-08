@@ -10,7 +10,7 @@ class _BaseBackend:
         self._chart = chart
 
     @lazy_property
-    def _chart_type(self) -> str:
+    def _chart_type(self) -> CHART_TYPE:
         return self._chart.get("options", {}).get("chart_type", CHART_TYPE.LINE)
 
     @lazy_property

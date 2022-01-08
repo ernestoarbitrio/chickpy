@@ -106,10 +106,11 @@ code_expand: code "..." code
 
 create_chart: "CREATE"i _WS "CHART"i _WS label _WS data_source? chart_options*
 
-data_source: data_source1 | data_source2 | data_source3
+data_source: data_source1 | data_source2 | data_source3 | data_source_csv
 data_source1: "XVALUES"i _WS x_values _WS "YVALUES"i _WS y_values
 data_source2: "YVALUES"i _WS y_values _WS "XVALUES"i _WS x_values
 data_source3: "VALUES"i _WS x_values _WS y_values
+data_source_csv: "FROM"i _WS "CSV"i _WS ESCAPED_STRING
 
 chart_options: _WS "TYPE"i _WS CHART_TYPE?
 CHART_TYPE: "LINE"i|"SCATTER"i|"BAR"i|"HORIZONTAL"i _WS "BAR"i

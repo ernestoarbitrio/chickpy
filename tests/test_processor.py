@@ -1,3 +1,5 @@
+import csv
+
 import pytest
 from lark.exceptions import UnexpectedToken
 from mock import patch
@@ -78,6 +80,44 @@ class Describe_CreateChartProcessor:
         processor.validate()
 
         assert processor._chart == expected_value
+
+    @pytest.mark.parametrize(
+        "script, csv_file",
+        (
+            (
+                """CREATE CHART "foo" FROM CSV placeholder;""",
+                '"tests/fixtures/csv/base_csv_comma_separated.csv"',
+            ),
+            (
+                """CREATE CHART "foo" FROM CSV placeholder;""",
+                '"tests/fixtures/csv/base_csv_semicolon_separated.csv"',
+            ),
+        ),
+    )
+    def it_validates_and_build_the_chart_data_from_csv(self, script, csv_file):
+        tree = parser.parse(script.replace("placeholder", csv_file))
+        backend_ = MatplotlibBackend
+        processor = _CreateChartProcessor(tree.children[0].children[0], backend_)
+        processor.validate()
+
+        assert processor._chart == {
+            "label": '"foo"',
+            "xvalues": [0.0, 1.0, 2.0, 4.0, 8.0],
+            "yvalues": [1.0, 2.0, 3.0, 7.0, 9.0],
+            "options": {},
+        }
+
+    def but_it_raises_an_exception_when_ther_is_a_delimiter_mismatch(self):
+        script = """CREATE CHART "foot" FROM CSV "tests/fixtures/csv/base_csv_wrong_sep.csv";"""  # noqa
+        tree = parser.parse(script)
+        backend_ = MatplotlibBackend
+        processor = _CreateChartProcessor(tree.children[0].children[0], backend_)
+        with pytest.raises(csv.Error) as e:
+            processor.validate()
+
+        assert (
+            str(e.value) == "Could not determine delimiter. Allowed delimiters are ,;|~"
+        )
 
     def but_it_raises_an_error_if_the_command_is_wrong(self):
         script = "CREATE foo;"
