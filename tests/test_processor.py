@@ -108,7 +108,7 @@ class Describe_CreateChartProcessor:
         }
 
     def but_it_raises_an_exception_when_ther_is_a_delimiter_mismatch(self):
-        script = """CREATE CHART "foot" FROM CSV "tests/fixtures/csv/base_csv_wrong_sep.csv";"""  # noqa
+        script = """CREATE CHART "foo" FROM CSV "tests/fixtures/csv/base_csv_wrong_sep.csv";"""  # noqa
         tree = parser.parse(script)
         backend_ = MatplotlibBackend
         processor = _CreateChartProcessor(tree.children[0].children[0], backend_)

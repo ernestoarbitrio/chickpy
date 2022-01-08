@@ -1,12 +1,12 @@
-import csv
 from functools import cached_property as lazy_property
-from pathlib import Path
-from typing import Any, List, Tuple, Type, Union
+from typing import Any, List, Type, Union
 
 from lark import Token, Tree
 
 from chickpy.backend import MatplotlibBackend
+from chickpy.datasource import DataSource
 from chickpy.enums import CHART_TYPE
+from chickpy.options import ChartOptions
 from chickpy.parser import parser
 
 
@@ -61,8 +61,8 @@ class _CreateChartProcessor:
         chart_options_nodes: List = self._pick_nodes(
             "chart_options", self._tree.children
         )
-        xvalues, yvalues = _DataSource.factory(data_source_tree)
-        options: dict = _ChartOptions.values(chart_options_nodes)
+        xvalues, yvalues = DataSource.values(data_source_tree)
+        options: dict = ChartOptions.values(chart_options_nodes)
         self._validate(xvalues, options)
         self._chart = {
             "label": label.value,
@@ -120,96 +120,6 @@ class _CommandProcessor:
             if isinstance(node.children[0], Tree):
                 return node.children[0]
         raise TypeError("Node type mismatch")
-
-
-# ==================================CHART OPTIONS PARSER================================
-
-
-class _ChartOptions:
-    def __init__(self, options_nodes: List[list]):
-        self._options_nodes = options_nodes
-
-    @classmethod
-    def values(cls, options_nodes: List[list]) -> dict:
-        options: dict = dict()
-        for node in options_nodes:
-            for token in node:
-                options[token.type.lower()] = getattr(
-                    CHART_TYPE, token.value.replace(" ", "_")
-                )
-        return options
-
-
-# ==================================DATA SOURCE PARSER==================================
-
-
-class _DataSource:
-    def __init__(self, data_source_tree: Any):
-        self._data_source_tree = data_source_tree
-
-    def sanitize_value(self, value: str) -> Union[str, float]:
-        try:
-            return float(value)
-        except ValueError:
-            return value[1:-1]
-
-    @classmethod
-    def factory(cls, data_src_tree: Any) -> Tuple[List[Union[str, float]], List[float]]:
-        data_source: str = data_src_tree.children[0].data.value
-        if data_source == "data_source_csv":
-            return _DataSourceCsv.values(data_src_tree)
-        return _DataSourceStd.values(data_src_tree)
-
-    @classmethod
-    def values(
-        cls, data_source_tree: Any
-    ) -> Tuple[List[Union[str, float]], List[float]]:
-        return cls(data_source_tree)._values()
-
-    def _values(self) -> Tuple[List[Union[str, float]], List[float]]:
-        raise NotImplementedError
-
-
-class _DataSourceCsv(_DataSource):
-
-    delimiters = ",;|~"
-
-    def _values(self) -> Tuple[List[Union[str, float]], List[float]]:
-        with open(self._file_path, mode="r") as csv_file:
-            try:
-                dialect = csv.Sniffer().sniff(
-                    csv_file.read(), delimiters=self.delimiters
-                )
-            except csv.Error as e:
-                raise csv.Error(f"{str(e)}. Allowed delimiters are {self.delimiters}")
-            csv_file.seek(0)
-            csv_reader = csv.DictReader(
-                csv_file,
-                quoting=csv.QUOTE_MINIMAL,
-                dialect=dialect,
-            )
-            values: List[dict] = list(csv_reader)
-        xvalues = [self.sanitize_value(row["x"]) for row in values]
-        yvalues = [float(row["y"]) for row in values]
-        return xvalues, yvalues
-
-    @property
-    def _file_path(self) -> Path:
-        file: str = self._data_source_tree.children[0].children[0].value[1:-1]
-        return Path(file).resolve()
-
-
-class _DataSourceStd(_DataSource):
-    def _values(self) -> Tuple[List[Union[str, float]], List[float]]:
-        xvalues: map = map(
-            lambda x: self.sanitize_value(x.children[0].value),
-            list(self._data_source_tree.find_data("x_values"))[0].children,
-        )
-        yvalues: map = map(
-            lambda x: float(x.children[0].value),
-            list(self._data_source_tree.find_data("y_values"))[0].children,
-        )
-        return list(xvalues), list(yvalues)
 
 
 PROCESSORS = {"create_chart": _CreateChartProcessor}
