@@ -1,14 +1,36 @@
 from functools import cached_property as lazy_property
-from typing import Any, List, Tuple, Type, Union
+from typing import Any, List, Type, Union
 
 from lark import Token, Tree
 
 from chickpy.backend import MatplotlibBackend
+from chickpy.datasource import DataSource
 from chickpy.enums import CHART_TYPE
+from chickpy.options import ChartOptions
 from chickpy.parser import parser
 
 
 class Command:
+    """
+    Object representing a base command.
+
+    Attributes
+    ----------
+    script : str
+        A string representing the a Graph Definition Languate command.
+
+    Methods
+    -------
+    run(script: str, show_output: bool = True)
+        Parse validate and run the given script. If show_output is False the output will
+        be hidden. Default is True.
+
+    Usage
+    -----
+    >>> from chickpy.processor import Command
+    >>> Command.run(\"""CREATE CHART "foo" VALUES [-1,2,3,4] [4,5,6,7] TYPE LINE;\""")
+    """
+
     def __init__(self, script: str):
         self._script = script
 
@@ -23,10 +45,11 @@ class Command:
 class _CreateChartProcessor:
     """Processes the Tree node from the script corresponding to create_chart."""
 
+    _chart: dict = {}
+
     def __init__(self, tree: Tree, backend: Type[MatplotlibBackend]):
         self._tree = tree
         self._backend = backend
-        self._chart: dict = {}
 
     @lazy_property
     def backend(self) -> MatplotlibBackend:
@@ -38,8 +61,8 @@ class _CreateChartProcessor:
         chart_options_nodes: List = self._pick_nodes(
             "chart_options", self._tree.children
         )
-        xvalues, yvalues = _DataSource.values(data_source_tree)
-        options: dict = _ChartOptions.values(chart_options_nodes)
+        xvalues, yvalues = DataSource.values(data_source_tree)
+        options: dict = ChartOptions.values(chart_options_nodes)
         self._validate(xvalues, options)
         self._chart = {
             "label": label.value,
@@ -66,7 +89,7 @@ class _CreateChartProcessor:
         return matches[0].children if matches else [Token("", "")]
 
     def _validate(self, xvalues: List[Union[str, float]], options: dict) -> None:
-        chart_type: str = options.get("chart_type", CHART_TYPE.LINE)
+        chart_type: CHART_TYPE = options.get("chart_type", CHART_TYPE.LINE)
         if chart_type in CHART_TYPE.BARS() and all(
             isinstance(x, float) for x in xvalues
         ):
@@ -97,50 +120,6 @@ class _CommandProcessor:
             if isinstance(node.children[0], Tree):
                 return node.children[0]
         raise TypeError("Node type mismatch")
-
-
-# ==================================NODE PARSERS========================================
-
-
-class _ChartOptions:
-    def __init__(self, options_nodes: List[list]):
-        self._options_nodes = options_nodes
-
-    @classmethod
-    def values(cls, options_nodes: List[list]) -> dict:
-        options: dict = dict()
-        for node in options_nodes:
-            for token in node:
-                options[token.type.lower()] = getattr(
-                    CHART_TYPE, token.value.replace(" ", "_")
-                )
-        return options
-
-
-class _DataSource:
-    def __init__(self, data_source_tree: Any):
-        self._data_source_tree = data_source_tree
-
-    @classmethod
-    def values(cls, data_src_tree: Any) -> Tuple[List[Union[str, float]], List[float]]:
-        def sanitize_value(value: str) -> Union[str, float]:
-            try:
-                return float(value)
-            except ValueError:
-                return value[1:-1]
-
-        xvalues: map = map(
-            lambda x: sanitize_value(x.children[0].value),
-            list(data_src_tree.find_data("x_values"))[0].children,
-        )
-        yvalues: map = map(
-            lambda x: float(x.children[0].value),
-            list(data_src_tree.find_data("y_values"))[0].children,
-        )
-        return list(xvalues), list(yvalues)
-
-
-# ======================================================================================
 
 
 PROCESSORS = {"create_chart": _CreateChartProcessor}
