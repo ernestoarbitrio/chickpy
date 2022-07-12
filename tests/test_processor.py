@@ -2,6 +2,7 @@ import csv
 
 import pytest
 from lark.exceptions import UnexpectedToken
+from matplotlib.figure import Figure
 from mock import patch
 
 import chickpy.backend as backend  # noqa
@@ -275,3 +276,9 @@ class Describe_Command:
         getattr(mock_plt, plot_type).assert_called_once_with(
             [0.0, 1.0, 2.0, 4.0, 8.0], [1.0, 2.0, 3.0, 7.0, 9.0]
         )
+
+    def it_returns_a_figure_object_using_the_render_method(self):
+        script = """CREATE CHART "foo" VALUES [1,2,3] [4,5,6] TYPE LINE;"""
+        fig = Command.render(script)
+
+        assert isinstance(fig, Figure)
