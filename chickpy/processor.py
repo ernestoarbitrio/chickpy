@@ -3,7 +3,7 @@ from typing import Any, List, Type, Union
 
 from lark import Token, Tree
 
-from chickpy.backend import MatplotlibBackend
+from chickpy.backend import Figure, MatplotlibBackend
 from chickpy.datasource import DataSource
 from chickpy.enums import CHART_TYPE
 from chickpy.options import ChartOptions
@@ -40,6 +40,13 @@ class Command:
         processor: _CreateChartProcessor = _CommandProcessor.factory(tree)
         processor.validate()
         processor.backend.render(show_output)
+
+    @classmethod
+    def render(cls, script: str) -> Figure:
+        tree: Tree = parser.parse(script)
+        processor: _CreateChartProcessor = _CommandProcessor.factory(tree)
+        processor.validate()
+        return processor.backend.figure()
 
 
 class _CreateChartProcessor:
@@ -86,7 +93,7 @@ class _CreateChartProcessor:
         matches: List[Tree] = [
             n for n in nodes if isinstance(n, Tree) and n.data == node_type
         ]
-        return matches[0].children if matches else [Token("", "")]
+        return matches[0].children if matches else [Token("", "")]  # type: ignore
 
     def _validate(self, xvalues: List[Union[str, float]], options: dict) -> None:
         chart_type: CHART_TYPE = options.get("chart_type", CHART_TYPE.LINE)

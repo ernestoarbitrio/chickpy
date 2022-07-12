@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from functools import cached_property as lazy_property
 
 import matplotlib.pyplot as plt  # type: ignore
+from matplotlib.figure import Figure  # type: ignore
 
 from chickpy.enums import CHART_TYPE
 
@@ -13,6 +14,10 @@ class Backend(ABC):
 
     @abstractmethod
     def render(self, show: bool = True) -> None:
+        pass
+
+    @abstractmethod
+    def figure(self) -> Figure:
         pass
 
     @lazy_property
@@ -32,3 +37,9 @@ class MatplotlibBackend(Backend):
         getattr(plt, self._method_name)(self._chart["xvalues"], self._chart["yvalues"])
         if show:
             plt.show()
+
+    def figure(self) -> Figure:
+        fig, ax = plt.subplots()
+        getattr(ax, self._method_name)(self._chart["xvalues"], self._chart["yvalues"])
+        ax.set_title(self._chart["label"][1:-1])
+        return fig
