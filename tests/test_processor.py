@@ -161,6 +161,72 @@ class Describe_CreateChartProcessor:
 
         assert str(e.value) == f"{chart_type} cannot have numeric x values."
 
+    @pytest.mark.parametrize(
+        "script, expected_chart_data",
+        (
+            (
+                """CREATE CHART "foo" FROM CSV "{}" FOR x BY y;""",
+                {
+                    "label": '"foo"',
+                    "xvalues": [0.0, 1.0, 2.0, 4.0, 8.0],
+                    "yvalues": [1.0, 2.0, 3.0, 7.0, 9.0],
+                    "options": {},
+                },
+            ),
+            (
+                """CREATE CHART "foo" FROM CSV "{}" FOR x BY z;""",
+                {
+                    "label": '"foo"',
+                    "xvalues": [0.0, 1.0, 2.0, 4.0, 8.0],
+                    "yvalues": [1.0, 1.0, 2.0, 1.0, 2.0],
+                    "options": {},
+                },
+            ),
+            (
+                """CREATE CHART "foo" FROM CSV "{}" FOR z BY y;""",
+                {
+                    "label": '"foo"',
+                    "xvalues": [1.0, 1.0, 2.0, 1.0, 2.0],
+                    "yvalues": [1.0, 2.0, 3.0, 7.0, 9.0],
+                    "options": {},
+                },
+            ),
+        ),
+    )
+    def it_builds_chart_data_from_csv_for_specific_columnss(
+        self, script, expected_chart_data
+    ):
+        filename = "tests/fixtures/csv/multi_column.csv"
+        tree = parser.parse(script.format(filename))
+        backend_ = MatplotlibBackend
+        processor = _CreateChartProcessor(tree.children[0].children[0], backend_)
+        processor.validate()
+
+        assert processor._chart == expected_chart_data
+
+    @pytest.mark.parametrize(
+        "script, expected_error_msg",
+        (
+            (
+                """CREATE CHART "chart" FROM CSV "{}" FOR foo BY bar;""",
+                "Unknown column `foo` specified",
+            ),
+            (
+                """CREATE CHART "chart" FROM CSV "{}" FOR x BY bar;""",
+                "Unknown column `bar` specified",
+            ),
+        ),
+    )
+    def but_it_fails_on_unknown_column_names(self, script, expected_error_msg):
+        filename = "tests/fixtures/csv/multi_column.csv"
+        tree = parser.parse(script.format(filename))
+        backend_ = MatplotlibBackend
+        processor = _CreateChartProcessor(tree.children[0].children[0], backend_)
+        with pytest.raises(ValueError) as err:
+            processor.validate()
+
+        assert err.value.args[0] == expected_error_msg
+
 
 class Describe_CommandProcessor:
     def it_provides_a_factory_for_constructing_processor_objects(self, request):
