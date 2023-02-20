@@ -8,7 +8,7 @@ authors = ["Arbitrio <ernesto.arbitrio@gmail.com>"]
 python = "^3.8"
 lark = "^1.1.2"
 matplotlib = "^3.6.0"
-mypy = "^0.982"
+mypy = "^1.0"
 mock = "^4.0.3"
 
 [tool.poetry.dev-dependencies]
