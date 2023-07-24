@@ -36,19 +36,7 @@ RAW_LABEL: ESCAPED_STRING|BACKTICK_QUOTED
 label_list: (RAW_LABEL (_COMMA label)*|label_expand)
 label_expand: RAW_LABEL "..." label
 
-//
-// Expressions Arithmethic/Logic
-//
 
-//
-// NOTE ABOUT EXPRESSIONS
-//  If your rule needs to use `expression` you must use its expansion:
-//      e_term (a_op e_term)*
-//  inside your command definition and add an entry for your rule under
-//  the `CommandsWExpressionTransformers` that grabs all the nodes of the
-//  expression and returns a single node, so your processor receives a single
-//  node inside instead of an indeterminate list of expression chunks.
-//
 expression: e_term (a_op e_term)*
 a_op: (a_op_word|a_op_symbol)
 !a_op_symbol: _WS? ("+"|/-/|"*"|"/"|"<"|">"|"<="|">="|"=="|"="|"!=") _WS?
