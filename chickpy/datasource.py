@@ -29,7 +29,6 @@ class DataSource(ABC):
 
 @dataclass
 class _DataSourceCsv(DataSource):
-
     _data_source_tree: Any
 
     @lazy_property
@@ -58,7 +57,6 @@ class _DataSourceCsv(DataSource):
 
 @dataclass
 class _DataSourceStd(DataSource):
-
     _data_source_tree: Any
 
     @lazy_property

@@ -6,7 +6,6 @@ from chickpy.enums import CHART_TYPE
 
 @dataclass
 class ChartOptions:
-
     _options_nodes: List[list]
 
     @classmethod
