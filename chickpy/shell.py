@@ -5,6 +5,7 @@ from chickpy.processor import Command
 
 class ChickPrompt(Cmd):
     """Activate a shell usinng: python -m chickpy.shell"""
+
     prompt = "chickpy> "
     intro = "Welcome to chickpy shell! Type ? to list commands"
 

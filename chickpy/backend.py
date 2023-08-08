@@ -9,7 +9,6 @@ from chickpy.enums import CHART_TYPE
 
 
 class Backend(ABC):
-
     _chart: dict
 
     @abstractmethod
@@ -28,7 +27,6 @@ class Backend(ABC):
 
 @dataclass
 class MatplotlibBackend(Backend):
-
     _chart: dict
 
     def render(self, show: bool = True) -> None:
