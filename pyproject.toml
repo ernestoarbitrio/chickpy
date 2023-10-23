@@ -6,7 +6,7 @@ authors = ["Arbitrio <ernesto.arbitrio@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
-lark = "^1.1.2"
+lark = "^1.1.8"
 matplotlib = "^3.6.0"
 mypy = "^1.4"
 mock = "^5.1.0"
