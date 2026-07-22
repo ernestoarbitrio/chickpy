@@ -45,14 +45,37 @@ class _DataSourceCsv(DataSource):
                 dialect=dialect,
             )
             values: List[dict] = list(csv_reader)
-        xvalues = [self.sanitize_value(row["x"]) for row in values]
-        yvalues = [float(row["y"]) for row in values]
+        try:
+            xvalues = [self.sanitize_value(row[self._x_col_name]) for row in values]
+            yvalues = [float(row[self._y_col_name]) for row in values]
+        except KeyError as err:
+            raise ValueError(f"Unknown column `{err.args[0]}` specified")
         return xvalues, yvalues
 
     @property
     def _file_path(self) -> Path:
         file: str = self._data_source_tree.children[0].children[0].value[1:-1]
         return Path(file).resolve()
+
+    @property
+    def _x_col_name(self) -> str:
+        """str representing name of specified x-column values, defaults to `x`."""
+        node = self._data_source_tree.children[0]
+        return (
+            "x"  # --- defaults to `x` if no column specified
+            if len(node.children) < 2
+            else node.children[1].children[0].children[0].value
+        )
+
+    @property
+    def _y_col_name(self) -> str:
+        """str representing name of specified x-column values, defaults to `y`."""
+        node = self._data_source_tree.children[0]
+        return (
+            "y"  # --- defaults to `y` if no column specified
+            if len(node.children) < 3
+            else node.children[2].children[0].children[0].value
+        )
 
 
 @dataclass
